@@ -12,18 +12,38 @@ const getOneRecipe = (id) => {
   });
 };
 
-const createRecipes = (recipes) => {
+const createRecipes = (recipes, userId) => {
   return prisma.recipes.create({
-    data: recipes,
+    data: {
+      id: recipes.id,
+      name: recipes.name,
+      description: recipes.description,
+      preparationTime: recipes.preparationTime,
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
+    },
   });
 };
 
-const updateRecipes = (id, recipe) => {
+const updateRecipes = (id, recipes, userId) => {
   return prisma.recipes.update({
     where: {
       id: id,
     },
-    data: recipe,
+    data: {
+      id: recipes.id,
+      name: recipes.name,
+      description: recipes.description,
+      preparationTime: recipes.preparationTime,
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
+    },
   });
 };
 
