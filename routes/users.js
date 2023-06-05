@@ -8,7 +8,6 @@ const {
   findUserByEmail,
   findUserById,
 } = require("../database/users");
-const { auth } = require("../middlewares/auth");
 
 const router = express.Router();
 

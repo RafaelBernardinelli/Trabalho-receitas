@@ -23,7 +23,7 @@ model Recipes {
   id Int @id @default(autoincrement())
   name String
   description String
-  preparationTime String
+  preparationTime Int
   user Users @relation(fields: [userId], references: [id])
   userId      Int
 }

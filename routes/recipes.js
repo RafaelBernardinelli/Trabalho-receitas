@@ -9,23 +9,32 @@ const {
 
 const z = require("zod");
 const auth = require("../middlewares/auth");
-const { findUserById } = require("../database/users");
-const { users } = require("../database/prisma");
 
 const router = express.Router();
 
 const RecipesSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  preparationTime: z.string(),
+  name: z
+    .string({
+      require_error: "Name must be required",
+      invalid_type_error: "Name must be a string",
+    })
+    .min(3),
+  description: z.string({
+    require_error: "description must be required",
+    invalid_type_error: "description must be a string",
+  }),
+  preparationTime: z.number(),
 });
 
 router.get("/recipes", auth, async (req, res) => {
-  const user = await findUserById(req.userId);
+  const list = await getAllRecipes(req.userId);
+  if (!list.length)
+    res.status(400).json({
+      message: "no recipe found",
+    });
 
-  if (!user) return res.status(404).json({ error: "User not found" });
+  list.forEach((it) => delete it.user.password);
 
-  const list = await getAllRecipes();
   res.json({
     list,
   });
@@ -34,7 +43,13 @@ router.get("/recipes", auth, async (req, res) => {
 router.get("/recipes/:id", auth, async (req, res) => {
   const id = Number(req.params.id);
 
-  const listOne = await getOneRecipe(id);
+  const listOne = await getOneRecipe(req.userId, id);
+  if (!listOne)
+    return res.status(404).json({
+      message: `User with ${req.userId} is not the owner of this recipe`,
+    });
+
+  delete listOne.user.password;
 
   res.json({
     listOne,
@@ -44,11 +59,10 @@ router.get("/recipes/:id", auth, async (req, res) => {
 router.post("/create-recipes", auth, async (req, res) => {
   try {
     const recipes = RecipesSchema.parse(req.body);
-    const user = await findUserById(res.userId);
-
-    if (!user) return res.status(404).json({ error: "User not found" });
-    const savedRecipes = await createRecipes(recipes, user.userId);
+    const userId = req.userId;
+    const savedRecipes = await createRecipes(recipes, userId);
     res.status(201).json({
+      message: "Recipe created",
       recipes: savedRecipes,
     });
   } catch (error) {
@@ -68,13 +82,17 @@ router.put("/update-recipes/:id", auth, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const recipes = RecipesSchema.parse(req.body);
-    const user = await findUserById(res.userId);
+    const user = await getOneRecipe(req.userId, id);
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user)
+      return res.status(401).json({
+        message: `User with ${req.userId} is not the owner of this recipe`,
+      });
 
-    const changeRecipe = await updateRecipes(id, recipes, user.userId);
+    const changeRecipe = await updateRecipes(id, recipes);
 
     res.json({
+      message: "Recipe updated",
       changeRecipe,
     });
   } catch (error) {
@@ -94,13 +112,15 @@ router.delete("/delete-recipe/:id", auth, async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    const user = await findUserById(res.userId);
-
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = await getOneRecipe(req.userId, id);
+    if (!user)
+      return res.status(404).json({
+        message: `User with ${req.userId} is not the owner of this recipe`,
+      });
     await deleteRecipes(id);
 
     res.json({
-      message: `Receita com id ${id} deletada com sucesso`,
+      message: `Recipe with id ${id} successfully deleted`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

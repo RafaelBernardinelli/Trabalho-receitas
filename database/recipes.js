@@ -1,13 +1,32 @@
 const prisma = require("./prisma");
 
-const getAllRecipes = () => {
-  return prisma.recipes.findMany({});
+const getAllRecipes = (userId) => {
+  return prisma.recipes.findMany({
+    select: {
+      name: true,
+      description: true,
+      preparationTime: true,
+      user: true,
+      userId: true,
+    },
+    where: {
+      userId,
+    },
+  });
 };
 
-const getOneRecipe = (id) => {
+const getOneRecipe = (id, recipeId) => {
   return prisma.recipes.findFirst({
+    select: {
+      name: true,
+      description: true,
+      preparationTime: true,
+      user: true,
+      userId: true,
+    },
     where: {
-      id,
+      userId: id,
+      id: recipeId,
     },
   });
 };
@@ -28,7 +47,7 @@ const createRecipes = (recipes, userId) => {
   });
 };
 
-const updateRecipes = (id, recipes, userId) => {
+const updateRecipes = (id, recipes) => {
   return prisma.recipes.update({
     where: {
       id: id,
@@ -38,11 +57,6 @@ const updateRecipes = (id, recipes, userId) => {
       name: recipes.name,
       description: recipes.description,
       preparationTime: recipes.preparationTime,
-      user: {
-        connect: {
-          id: userId,
-        },
-      },
     },
   });
 };
